@@ -11,8 +11,6 @@ from scipy.optimize import fmin, fmin_powell
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
-#plt.close('all')
-
 gl = globals().copy()
 for var in gl:
     if var[0] == '_': continue
