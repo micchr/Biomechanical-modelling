@@ -87,6 +87,7 @@ def mod(t):
 # that is the function of optimisation of the model parameters against the date (when present)
 def func(P, t, y):
     
+    # the model parameters have to be global to be disponible for the model
     global tr, tf, kf, p0, ti, ki, ts, ks, LB, HB, time
             
     tr = P[0]
@@ -98,11 +99,14 @@ def func(P, t, y):
     ts = P[6]
     ks = P[7]
     
+    # with the new set of paramters the synapse is simulated
     M = mod(t)
 
     Syn = M[:,0]*M[:,2]
     Syn = Syn/Syn[0]
     
+    # the following allows the user to impose a physiological range of parameters, for which, if outside, the cost function
+    # will be pohibitive
     A = 0
     for a in np.arange(len(P)):
         if P[a] > HB[a] :
