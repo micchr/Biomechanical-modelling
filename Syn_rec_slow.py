@@ -1,3 +1,5 @@
+#/usr/bin/python
+
 # -*- coding: utf-8 -*-
 """
 Created on Wed Sep 02 15:59:18 2015
@@ -18,19 +20,28 @@ for var in gl:
     if 'module' in str(globals()[var]): continue
     del globals()[var]
 
-
+# This function resolve the ODE part of the biomehanical model (the synaptic events make the differential equation not linear)
+# The full model is a modified version of the Tsodiks-Markram synapse model, we added a slow and a very slow component 
+# to match os close as possible the synapse physiology 
 def ODEfunc(x,t):
     
     global tr, tf, ti, ts, p0
     
+    # here is the neurotransmitter vesicle pool replenishment
     dx0 = (1-x[0])/tr
+    # here is the release facilitation
     dx1 = (x[2]-x[1])/tf
+    # slow component (calcium channel inactivation)
     dx2 = (x[3]-x[2])/ti
+    # very slow component (activation of G-proteins for instance by presynaptic mGluR)
     dx3 = (p0-x[3])/ts
     
     return [dx0, dx1, dx2, dx3]
 
 def mod(t):
+    
+    # that two part model the synapse stimulation protocol: the first one is the stimulation allowing the measurment 
+    # of the initial and late depression, the second one is the protocol of recovery measurement
     
     global time, kf, ki, ks, p0, tr
         
@@ -43,13 +54,19 @@ def mod(t):
 
         S[i,:] = [Y[-1,0], Y[-1,1], Y[-1,2], Y[-1,3]]
         
+        # the following are the amount  of event driven synapse modification 
+        # release of transmitter
         init[0] = S[i,0] - S[i,0]*S[i,2]
+        # facilitation
         init[1] = S[i,1] + kf*(1-S[i,1])
+        # calcium channel inactivation
         init[2] = S[i,2] - ki*S[i,2]
+        # mGluR activation
         init[3] = S[i,3] - ks*S[i,3]
         
     Int = tr
     tr = 8    
+    # the following tab is the index of recovery protocol stimulation
     IndRec = [100, 1000, 2000, 5000, 10000, 20000]
     for j in range(6):
         
@@ -67,7 +84,7 @@ def mod(t):
         
     return S
 
-
+# that is the function of optimisation of the model parameters against the date (when present)
 def func(P, t, y):
     
     global tr, tf, kf, p0, ti, ki, ts, ks, LB, HB, time
