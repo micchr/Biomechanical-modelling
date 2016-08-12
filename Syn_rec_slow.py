@@ -20,22 +20,26 @@ for var in gl:
     if 'module' in str(globals()[var]): continue
     del globals()[var]
 
-# This function resolve the ODE part of the biomehanical model (the synaptic events make the differential equation not linear)
-# The full model is a modified version of the Tsodiks-Markram synapse model, we added a slow and a very slow component 
-# to match os close as possible the synapse physiology 
+
 def ODEfunc(x,t):
+    # This function resolve the ODE part of the biomehanical model (the synaptic events make the differential equation not linear)
+    # The full model is a modified version of the Tsodiks-Markram synapse model, we added a slow and a very slow component 
+    # to match os close as possible the synapse physiology 
     
     global tr, tf, ti, ts, p0
     
-    # here is the neurotransmitter vesicle pool replenishment
     dx0 = (1-x[0])/tr
+    # here is the neurotransmitter vesicle pool replenishment
+
+    dx1 = (x[2]-x[1])/tf    
     # here is the release facilitation
-    dx1 = (x[2]-x[1])/tf
-    # slow component (calcium channel inactivation)
+
     dx2 = (x[3]-x[2])/ti
-    # very slow component (activation of G-proteins for instance by presynaptic mGluR)
+    # slow component (calcium channel inactivation)
+
     dx3 = (p0-x[3])/ts
-    
+    # very slow component (activation of G-proteins for instance by presynaptic mGluR)
+
     return [dx0, dx1, dx2, dx3]
 
 def mod(t):
@@ -55,14 +59,19 @@ def mod(t):
         S[i,:] = [Y[-1,0], Y[-1,1], Y[-1,2], Y[-1,3]]
         
         # the following are the amount  of event driven synapse modification 
-        # release of transmitter
+
         init[0] = S[i,0] - S[i,0]*S[i,2]
-        # facilitation
+        # release of transmitter
+        
         init[1] = S[i,1] + kf*(1-S[i,1])
-        # calcium channel inactivation
+        # facilitation
+
         init[2] = S[i,2] - ki*S[i,2]
-        # mGluR activation
+        # calcium channel inactivation
+
         init[3] = S[i,3] - ks*S[i,3]
+        # mGluR activation
+
         
     Int = tr
     tr = 8    
@@ -84,11 +93,12 @@ def mod(t):
         
     return S
 
-# that is the function of optimisation of the model parameters against the date (when present)
 def func(P, t, y):
+    # that is the function of optimisation of the model parameters against the date (when present)
     
-    # the model parameters have to be global to be disponible for the model
     global tr, tf, kf, p0, ti, ki, ts, ks, LB, HB, time
+    # the model parameters have to be global to be disponible for the model
+
             
     tr = P[0]
     tf = P[1]
@@ -99,15 +109,16 @@ def func(P, t, y):
     ts = P[6]
     ks = P[7]
     
-    # with the new set of paramters the synapse is simulated
     M = mod(t)
+    # with the new set of paramters the synapse is simulated
+
 
     Syn = M[:,0]*M[:,2]
     Syn = Syn/Syn[0]
     
+    A = 0
     # the following allows the user to impose a physiological range of parameters, for which, if outside, the cost function
     # will be pohibitive
-    A = 0
     for a in np.arange(len(P)):
         if P[a] > HB[a] :
             A = A + abs(P[a] - HB[a])*1e6
