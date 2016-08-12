@@ -1,11 +1,14 @@
-#/usr/bin/python
+#!/usr/bin/python
 
-# -*- coding: utf-8 -*-
+# after discovering Linux at home, I changed also my OS at home, and understood why people said linux is better for work.
+# Multithreading became obvious
+
 """
 Created on Wed Sep 02 15:59:18 2015
 
 @author: cmi
 """
+# -*- coding: utf-8 -*-
 
 from __future__ import division
 import numpy as np
@@ -20,32 +23,30 @@ for var in gl:
     if 'module' in str(globals()[var]): continue
     del globals()[var]
 
-
+# This function resolve the ODE part of the biomehanical model (the synaptic events make the differential equation not linear)
+# The full model is a modified version of the Tsodiks-Markram synapse model, we added a slow and a very slow component 
+# to match os close as possible the synapse physiology 
 def ODEfunc(x,t):
-    # This function resolve the ODE part of the biomehanical model (the synaptic events make the differential equation not linear)
-    # The full model is a modified version of the Tsodiks-Markram synapse model, we added a slow and a very slow component 
-    # to match os close as possible the synapse physiology 
     
     global tr, tf, ti, ts, p0
     
-    dx0 = (1-x[0])/tr
     # here is the neurotransmitter vesicle pool replenishment
-
-    dx1 = (x[2]-x[1])/tf    
+    dx0 = (1-x[0])/tr
+    
     # here is the release facilitation
-
-    dx2 = (x[3]-x[2])/ti
+    dx1 = (x[2]-x[1])/tf    
+    
     # slow component (calcium channel inactivation)
-
-    dx3 = (p0-x[3])/ts
+    dx2 = (x[3]-x[2])/ti
+    
     # very slow component (activation of G-proteins for instance by presynaptic mGluR)
+    dx3 = (p0-x[3])/ts
 
     return [dx0, dx1, dx2, dx3]
 
+# that two part model the synapse stimulation protocol: the first one is the stimulation allowing the measurment 
+# of the initial and late depression, the second one is the protocol of recovery measurement
 def mod(t):
-    
-    # that two part model the synapse stimulation protocol: the first one is the stimulation allowing the measurment 
-    # of the initial and late depression, the second one is the protocol of recovery measurement
     
     global time, kf, ki, ks, p0, tr
         
@@ -93,13 +94,12 @@ def mod(t):
         
     return S
 
+# that is the function of optimisation of the model parameters against the date (when present)
 def func(P, t, y):
-    # that is the function of optimisation of the model parameters against the date (when present)
-    
-    global tr, tf, kf, p0, ti, ki, ts, ks, LB, HB, time
-    # the model parameters have to be global to be disponible for the model
 
-            
+    # the model parameters have to be global to be disponible for the model
+    global tr, tf, kf, p0, ti, ki, ts, ks, LB, HB, time
+
     tr = P[0]
     tf = P[1]
     kf = P[2]
@@ -109,16 +109,15 @@ def func(P, t, y):
     ts = P[6]
     ks = P[7]
     
-    M = mod(t)
     # with the new set of paramters the synapse is simulated
-
+    M = mod(t)
 
     Syn = M[:,0]*M[:,2]
     Syn = Syn/Syn[0]
     
-    A = 0
     # the following allows the user to impose a physiological range of parameters, for which, if outside, the cost function
     # will be pohibitive
+    A = 0
     for a in np.arange(len(P)):
         if P[a] > HB[a] :
             A = A + abs(P[a] - HB[a])*1e6
